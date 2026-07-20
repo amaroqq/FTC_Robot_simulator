@@ -1,0 +1,2371 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>FTC Robot Simulator & IDE</title>
+        <style>
+            :root {
+                --bg-main: #0b0f17;
+                --bg-pane: #111827;
+                --bg-editor: #0d1117;
+                --border-color: #1f2937;
+                --text-main: #f1f5f9;
+                --text-muted: #94a3b8;
+                --accent-blue: #3b82f6;
+                --accent-blue-hover: #2563eb;
+                --accent-green: #10b981;
+                --accent-green-hover: #059669;
+                --accent-red: #ef4444;
+                --accent-red-hover: #dc2626;
+                --status-yellow: #eab308;
+            }
+
+            body,
+            html {
+                margin: 0;
+                padding: 0;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+                background-color: var(--bg-main);
+                color: var(--text-main);
+                font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            }
+
+            /* Split-Screen Dashboard Layout */
+            .dashboard {
+                display: flex;
+                width: 100vw;
+                height: 100vh;
+                overflow: hidden;
+            }
+
+            /* Left pane - Controls, Code Editor, Telemetry */
+            .left-pane {
+                width: 45%;
+                min-width: 450px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                background-color: var(--bg-pane);
+                border-right: 1px solid var(--border-color);
+                box-sizing: border-box;
+                z-index: 10;
+            }
+
+            /* Right pane - Three.js WebGL Canvas */
+            .right-pane {
+                width: 55%;
+                height: 100%;
+                position: relative;
+                background-color: #050508;
+            }
+
+            #canvas-container {
+                width: 100%;
+                height: 100%;
+                display: block;
+            }
+
+            /* Header Info */
+            .header {
+                padding: 16px 20px;
+                border-bottom: 1px solid var(--border-color);
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .header h1 {
+                margin: 0;
+                font-size: 1.15rem;
+                font-weight: 700;
+                letter-spacing: -0.025em;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .header .subtitle {
+                font-size: 0.75rem;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            /* Driver Station Controls UI */
+            .driver-station {
+                padding: 16px 20px;
+                background-color: rgba(15, 23, 42, 0.4);
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .ds-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 12px;
+            }
+
+            .ds-title {
+                font-size: 0.8rem;
+                font-weight: 600;
+                color: var(--text-muted);
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .ds-status {
+                font-family: monospace;
+                font-size: 1.15rem;
+                font-weight: 800;
+                color: var(--accent-red);
+                letter-spacing: 0.05em;
+                transition: color 0.2s ease;
+            }
+
+            .ds-controls {
+                display: flex;
+                gap: 8px;
+            }
+
+            .btn {
+                flex: 1;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 14px;
+                font-size: 0.85rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                color: #fff;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+            }
+
+            .btn:disabled {
+                opacity: 0.25;
+                cursor: not-allowed;
+            }
+
+            .btn-init {
+                background-color: var(--accent-blue);
+            }
+            .btn-init:hover:not(:disabled) {
+                background-color: var(--accent-blue-hover);
+            }
+
+            .btn-start {
+                background-color: var(--accent-green);
+            }
+            .btn-start:hover:not(:disabled) {
+                background-color: var(--accent-green-hover);
+            }
+
+            .btn-stop {
+                background-color: var(--accent-red);
+            }
+            .btn-stop:hover:not(:disabled) {
+                background-color: var(--accent-red-hover);
+            }
+
+            /* Template tabs */
+            .tabs-container {
+                display: flex;
+                background-color: #0f172a;
+                border-bottom: 1px solid var(--border-color);
+                padding: 4px 12px 0 12px;
+                gap: 4px;
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+            .tabs-container::-webkit-scrollbar {
+                display: none;
+            }
+
+            .tab-btn {
+                background: none;
+                border: none;
+                color: var(--text-muted);
+                padding: 8px 14px;
+                font-size: 0.8rem;
+                font-weight: 600;
+                cursor: pointer;
+                border-bottom: 2px solid transparent;
+                transition: all 0.2s;
+                white-space: nowrap;
+            }
+
+            .tab-btn.active {
+                color: #fff;
+                border-bottom: 2px solid var(--accent-blue);
+            }
+
+            .tab-btn:hover:not(.active) {
+                color: var(--text-main);
+            }
+
+            /* Code Editor Container */
+            .editor-wrapper {
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                position: relative;
+                min-height: 200px;
+                overflow: hidden;
+            }
+
+            #editor-container {
+                width: 100%;
+                height: 100%;
+                background-color: var(--bg-editor);
+            }
+
+            /* Configuration UI Container */
+            #config-container {
+                width: 100%;
+                height: 100%;
+                background-color: var(--bg-editor);
+                overflow-y: auto;
+                padding: 20px;
+                box-sizing: border-box;
+                display: none;
+            }
+
+            .config-card {
+                background: rgba(255, 255, 255, 0.03);
+                border: 1px solid var(--border-color);
+                border-radius: 8px;
+                padding: 16px;
+                margin-bottom: 16px;
+            }
+
+            .config-card h4 {
+                margin: 0 0 12px 0;
+                color: #fff;
+                font-size: 0.9rem;
+                text-transform: uppercase;
+                letter-spacing: 0.03em;
+            }
+
+            .config-group {
+                margin-bottom: 12px;
+                display: flex;
+                flex-direction: column;
+                gap: 6px;
+            }
+
+            .config-group label {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: var(--text-muted);
+            }
+
+            .config-select,
+            .config-input {
+                background-color: #0f172a;
+                border: 1px solid var(--border-color);
+                color: #fff;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                outline: none;
+            }
+
+            .config-select:focus,
+            .config-input:focus {
+                border-color: var(--accent-blue);
+            }
+
+            /* Documentation Styles */
+            #help-container {
+                width: 100%;
+                height: 100%;
+                background-color: var(--bg-editor);
+                overflow-y: auto;
+                padding: 20px;
+                box-sizing: border-box;
+                display: none;
+            }
+
+            .help-section {
+                margin-bottom: 24px;
+            }
+
+            .help-section h3 {
+                margin: 0 0 10px 0;
+                color: var(--accent-blue);
+                font-size: 0.95rem;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 6px;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .help-section p {
+                font-size: 0.85rem;
+                line-height: 1.5;
+                color: var(--text-muted);
+                margin: 0 0 10px 0;
+            }
+
+            .help-section p strong {
+                color: var(--text-main);
+            }
+
+            .help-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 12px 0;
+                font-size: 0.8rem;
+            }
+
+            .help-table th,
+            .help-table td {
+                border: 1px solid var(--border-color);
+                padding: 8px;
+                text-align: left;
+                vertical-align: top;
+            }
+
+            .help-table th {
+                background-color: #1e293b;
+                color: #fff;
+            }
+
+            .help-table td code {
+                background: rgba(255, 255, 255, 0.08);
+                padding: 2px 4px;
+                border-radius: 4px;
+                font-family: monospace;
+                color: #facc15;
+            }
+
+            .math-equation {
+                background-color: rgba(15, 23, 42, 0.4);
+                border-left: 3px solid var(--accent-blue);
+                padding: 12px;
+                font-size: 0.95rem;
+                margin: 12px 0;
+                color: #fff;
+                line-height: 1.6;
+                overflow-x: auto;
+            }
+
+            .math-code-block {
+                background: #090d16;
+                border: 1px solid var(--border-color);
+                border-radius: 6px;
+                padding: 10px 12px;
+                font-family: "Consolas", monospace;
+                font-size: 0.8rem;
+                color: #a7f3d0;
+                overflow-x: auto;
+                margin: 8px 0;
+            }
+
+            /* Telemetry & Output HUD */
+            .telemetry-pane {
+                height: 200px;
+                border-top: 1px solid var(--border-color);
+                background-color: #090d16;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .telemetry-header {
+                padding: 8px 16px;
+                border-bottom: 1px solid var(--border-color);
+                background-color: #0d1321;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            }
+
+            .telemetry-title {
+                font-size: 0.75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                color: var(--text-muted);
+            }
+
+            #telemetry-output {
+                flex-grow: 1;
+                padding: 12px 16px;
+                font-family: "Consolas", "Courier New", monospace;
+                font-size: 0.85rem;
+                line-height: 1.4;
+                overflow-y: auto;
+                color: #a7f3d0;
+            }
+
+            /* Viewport Overlays */
+            .viewport-overlay {
+                position: absolute;
+                bottom: 20px;
+                left: 20px;
+                background: rgba(15, 23, 42, 0.85);
+                border: 1px solid var(--border-color);
+                padding: 12px 16px;
+                border-radius: 8px;
+                pointer-events: none;
+                backdrop-filter: blur(4px);
+                max-width: 320px;
+                z-index: 5;
+            }
+
+            .viewport-overlay h3 {
+                margin: 0 0 6px 0;
+                font-size: 0.85rem;
+                color: #fff;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .viewport-overlay p {
+                margin: 0;
+                font-size: 0.75rem;
+                color: var(--text-muted);
+                line-height: 1.4;
+            }
+
+            .controls-legend {
+                display: flex;
+                gap: 6px;
+                flex-wrap: wrap;
+                margin-top: 8px;
+            }
+
+            .key-cap {
+                background: #334155;
+                color: #fff;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-size: 0.7rem;
+                font-weight: bold;
+                font-family: monospace;
+            }
+
+            /* Physical reset button in canvas */
+            .reset-phys-btn {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                background: rgba(15, 23, 42, 0.85);
+                border: 1px solid var(--border-color);
+                color: #fff;
+                font-size: 0.8rem;
+                font-weight: 600;
+                padding: 8px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                transition: all 0.2s;
+                z-index: 5;
+                backdrop-filter: blur(4px);
+            }
+
+            .reset-phys-btn:hover {
+                background: var(--accent-blue);
+                border-color: var(--accent-blue-hover);
+            }
+        </style>
+
+        <!-- Load MathJax CDN for LaTeX Math support in Librewolf/Firefox on Linux -->
+        <script>
+            window.MathJax = {
+                tex: {
+                    inlineMath: [
+                        ["$", "$"],
+                        ["\\(", "\\)"],
+                    ],
+                    displayMath: [
+                        ["$$", "$$"],
+                        ["\\[", "\\]"],
+                    ],
+                },
+                svg: {
+                    fontCache: "global",
+                },
+            };
+        </script>
+        <script
+            id="MathJax-script"
+            async
+            src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+        ></script>
+
+        <!-- Load Monaco Editor dependencies -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs/loader.min.js"></script>
+
+        <!-- Import Maps for Three.js and Rapier -->
+        <script type="importmap">
+            {
+                "imports": {
+                    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+                    "@dimforge/rapier3d-compat": "https://unpkg.com/@dimforge/rapier3d-compat@0.13.1/rapier.es.js"
+                }
+            }
+        </script>
+    </head>
+    <body>
+        <div class="dashboard">
+            <!-- Left Pane: Controls, Interactive Editor, Logs -->
+            <div class="left-pane">
+                <div class="header">
+                    <div>
+                        <h1>FTC Virtual Lab</h1>
+                        <p class="subtitle">LinearOpMode Compiler & Sandbox</p>
+                    </div>
+                    <span
+                        style="
+                            font-size: 0.75rem;
+                            color: var(--accent-blue);
+                            font-weight: bold;
+                            padding: 4px 8px;
+                            background: rgba(59, 130, 246, 0.15);
+                            border-radius: 4px;
+                            border: 1px solid rgba(59, 130, 246, 0.3);
+                        "
+                        >PHASE 3 ACTIVE</span
+                    >
+                </div>
+
+                <!-- Driver Station Module -->
+                <div class="driver-station">
+                    <div class="ds-header">
+                        <span class="ds-title">FTC Driver Station</span>
+                        <span class="ds-status" id="ds-status-text"
+                            >STOPPED</span
+                        >
+                    </div>
+                    <div class="ds-controls">
+                        <button class="btn btn-init" id="btn-init">
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2.5"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path
+                                    d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
+                                />
+                                <line x1="12" y1="9" x2="12" y2="13" />
+                                <line x1="12" y1="17" x2="12.01" y2="17" />
+                            </svg>
+                            Init OpMode
+                        </button>
+                        <button class="btn btn-start" id="btn-start" disabled>
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Start
+                        </button>
+                        <button class="btn btn-stop" id="btn-stop" disabled>
+                            <svg
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                            >
+                                <rect
+                                    x="4"
+                                    y="4"
+                                    width="16"
+                                    height="16"
+                                    rx="2"
+                                />
+                            </svg>
+                            Stop
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Code Templates Navigation Tabs -->
+                <div class="tabs-container">
+                    <button
+                        class="tab-btn active"
+                        id="tab-teleop"
+                        onclick="switchTemplate('teleop')"
+                    >
+                        TeleOp Mode
+                    </button>
+                    <button
+                        class="tab-btn"
+                        id="tab-auto"
+                        onclick="switchTemplate('auto')"
+                    >
+                        Autonomous Mode
+                    </button>
+                    <button
+                        class="tab-btn"
+                        id="tab-config"
+                        onclick="switchTemplate('config')"
+                    >
+                        Robot Config
+                    </button>
+                    <button
+                        class="tab-btn"
+                        id="tab-help"
+                        onclick="switchTemplate('help')"
+                    >
+                        Help & Docs
+                    </button>
+                </div>
+
+                <!-- Live Code Editor wrapper -->
+                <div class="editor-wrapper">
+                    <div id="editor-container"></div>
+
+                    <!-- Robot Config Panel -->
+                    <div id="config-container">
+                        <div class="config-card">
+                            <h4>Motor Specifications</h4>
+
+                            <div class="config-group">
+                                <label for="motor-type-select"
+                                    >Base Motor Model</label
+                                >
+                                <select
+                                    id="motor-type-select"
+                                    class="config-select"
+                                >
+                                    <option value="gobilda_312">
+                                        GoBilda 5202 Series (312 RPM, 537.7 PPR)
+                                    </option>
+                                    <option value="gobilda_435">
+                                        GoBilda 5202 Series (435 RPM, 383.6 PPR)
+                                    </option>
+                                    <option value="gobilda_1150">
+                                        GoBilda 5202 Series (1150 RPM, 145.1
+                                        PPR)
+                                    </option>
+                                    <option value="neverest_40">
+                                        NeveRest Classic 40 (160 RPM, 1120 PPR)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="config-group">
+                                <label for="gear-ratio-input"
+                                    >External Gear Ratio (Driven :
+                                    Driving)</label
+                                >
+                                <select
+                                    id="gear-ratio-input"
+                                    class="config-select"
+                                >
+                                    <option value="1.0">
+                                        1:1 (Direct Drive)
+                                    </option>
+                                    <option value="2.0">
+                                        2:1 (Torque Reducer - Half Speed)
+                                    </option>
+                                    <option value="0.5">
+                                        1:2 (Speed Increaser - Double Speed)
+                                    </option>
+                                    <option value="1.5">
+                                        3:2 (Moderate Reduction)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="config-card">
+                            <h4>Chassis Configuration</h4>
+
+                            <div class="config-group">
+                                <label for="wheel-type-select"
+                                    >Drive Wheel Architecture</label
+                                >
+                                <select
+                                    id="wheel-type-select"
+                                    class="config-select"
+                                >
+                                    <option value="mecanum">
+                                        Mecanum Wheels (Holonomic Directional
+                                        rollers)
+                                    </option>
+                                    <option value="traction">
+                                        Standard Traction Wheels (High Forward
+                                        Grip, No Strafe)
+                                    </option>
+                                    <option value="omni">
+                                        Omni Wheels (Low Friction Side-rolling
+                                        rollers)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div class="config-group">
+                                <label for="zero-power-select"
+                                    >Zero Power Behavior</label
+                                >
+                                <select
+                                    id="zero-power-select"
+                                    class="config-select"
+                                >
+                                    <option value="brake">
+                                        BRAKE (Active Physics Stopping Friction)
+                                    </option>
+                                    <option value="float">
+                                        FLOAT (Inertia Coaster Mode)
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Help Panel -->
+                    <div id="help-container">
+                        <div class="help-section">
+                            <h3>How the Simulation Works</h3>
+                            <p>
+                                This workspace is designed to test standard FTC
+                                robotics logic completely inside your browser.
+                                Because web browsers are single-threaded, a
+                                typical Java infinite loop like
+                                <code>while (opModeIsActive())</code> would lock
+                                up the page. To avoid this, our system compiles
+                                your Java code into a JavaScript
+                                <strong>Generator Function</strong>.
+                            </p>
+                            <p>
+                                This allows the simulation to
+                                <code>yield</code> control back to the
+                                computer's rendering engine every frame.
+                                Consequently, the
+                                <strong>Three.js</strong> virtual viewport and
+                                <strong>Rapier.js</strong> physical engines can
+                                update at 60 FPS while your robot program
+                                executes in parallel.
+                            </p>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Available SDK API</h3>
+                            <p>
+                                The compiler exposes a mocked set of standard
+                                FTC hardware variables that you can program
+                                against:
+                            </p>
+
+                            <table class="help-table">
+                                <thead>
+                                    <tr>
+                                        <th>Hardware Object</th>
+                                        <th>Signature Method</th>
+                                        <th>Purpose / Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td>
+                                            <code>setPower(double power)</code>
+                                        </td>
+                                        <td>
+                                            Adjusts wheel motor speed. Accepts
+                                            values from <code>-1.0</code> to
+                                            <code>1.0</code>.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td>
+                                            <code>getCurrentPosition()</code>
+                                        </td>
+                                        <td>
+                                            Returns the physical wheel's encoder
+                                            ticks based on elapsed simulated
+                                            rotations.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td>
+                                            <code
+                                                >setMode(DcMotor.RunMode
+                                                mode)</code
+                                            >
+                                        </td>
+                                        <td>
+                                            Sets encoder mode. Mapped:
+                                            <code
+                                                >DcMotor.RunMode.STOP_AND_RESET_ENCODER</code
+                                            >,
+                                            <code
+                                                >DcMotor.RunMode.RUN_USING_ENCODER</code
+                                            >,
+                                            <code
+                                                >DcMotor.RunMode.RUN_TO_POSITION</code
+                                            >.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td>
+                                            <code
+                                                >setTargetPosition(int
+                                                target)</code
+                                            >
+                                        </td>
+                                        <td>
+                                            Establishes encoder target position.
+                                            Used alongside
+                                            <code>RUN_TO_POSITION</code>.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td><code>isBusy()</code></td>
+                                        <td>
+                                            Returns <code>true</code> if the
+                                            motor is actively striving towards
+                                            its target position.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <code>frontLeft</code>,
+                                            <code>frontRight</code>,
+                                            <code>backLeft</code>,
+                                            <code>backRight</code>
+                                        </td>
+                                        <td>
+                                            <code
+                                                >setZeroPowerBehavior(DcMotor.ZeroPowerBehavior
+                                                behavior)</code
+                                            >
+                                        </td>
+                                        <td>
+                                            Sets zero-power configuration.
+                                            Values:
+                                            <code
+                                                >DcMotor.ZeroPowerBehavior.BRAKE</code
+                                            >
+                                            or
+                                            <code
+                                                >DcMotor.ZeroPowerBehavior.FLOAT</code
+                                            >.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>gamepad1</code></td>
+                                        <td><code>left_stick_y</code></td>
+                                        <td>
+                                            Retrieves joystick Y coordinate
+                                            (typically maps to forward/reverse
+                                            driving).
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>gamepad1</code></td>
+                                        <td><code>left_stick_x</code></td>
+                                        <td>
+                                            Retrieves joystick X coordinate
+                                            (typically maps to lateral strafing
+                                            driving).
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>gamepad1</code></td>
+                                        <td><code>right_stick_x</code></td>
+                                        <td>
+                                            Retrieves right joystick X
+                                            coordinate (typically maps to
+                                            rotational turning).
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>telemetry</code></td>
+                                        <td>
+                                            <code
+                                                >addData(String label, Object
+                                                value)</code
+                                            >
+                                        </td>
+                                        <td>
+                                            Pushes telemetry diagnostic
+                                            printouts to the logging pane below.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><code>telemetry</code></td>
+                                        <td><code>update()</code></td>
+                                        <td>
+                                            Refreshes the terminal display to
+                                            render newly appended lines.
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Execution Hub</td>
+                                        <td>
+                                            <code
+                                                >sleep(long milliseconds)</code
+                                            >
+                                        </td>
+                                        <td>
+                                            Pauses execution of the autonomous
+                                            sequence for the specified duration.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Mecanum Chassis Coding & Kinematics</h3>
+                            <p>
+                                The simulated robot uses
+                                <strong>Mecanum Wheels</strong>. Because the
+                                rollers are aligned at a $45^\circ$ angle on the
+                                wheels, rotating the motors in specific patterns
+                                cancels or combines structural friction vectors.
+                                This lets the robot move sideways (strafe) and
+                                diagonally without changing its forward
+                                orientation.
+                            </p>
+                            <p>
+                                To compute the motor power levels required for
+                                omnidirectional movement based on driving,
+                                strafing, and turning control values, we apply
+                                the following kinematic equations:
+                            </p>
+
+                            <div class="math-equation">
+                                \begin{align*} v_{\text{frontLeft}} &=
+                                \text{drive} + \text{strafe} + \text{turn} \\
+                                v_{\text{frontRight}} &= \text{drive} -
+                                \text{strafe} - \text{turn} \\
+                                v_{\text{backLeft}} &= \text{drive} -
+                                \text{strafe} + \text{turn} \\
+                                v_{\text{backRight}} &= \text{drive} +
+                                \text{strafe} - \text{turn} \end{align*}
+                            </div>
+
+                            <p>
+                                Because these combinations can result in
+                                calculated motor powers exceeding
+                                <code>1.0</code>, it is best practice to scale
+                                the results dynamically in your TeleOp code:
+                            </p>
+                            <div class="math-code-block">
+                                double max = Math.max(Math.max(Math.abs(fl),
+                                Math.abs(fr)), Math.max(Math.abs(bl),
+                                Math.abs(br))); if (max > 1.0) { fl /= max; fr
+                                /= max; bl /= max; br /= max; }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Telemetry & Hardware Console Monitor -->
+                <div class="telemetry-pane">
+                    <div class="telemetry-header">
+                        <span class="telemetry-title"
+                            >Telemetry Terminal Monitor</span
+                        >
+                        <div
+                            style="display: flex; gap: 8px; align-items: center"
+                        >
+                            <span
+                                style="
+                                    width: 8px;
+                                    height: 8px;
+                                    border-radius: 50%;
+                                    background: #10b981;
+                                "
+                            ></span>
+                            <span
+                                style="
+                                    font-size: 0.7rem;
+                                    color: var(--text-muted);
+                                    font-family: monospace;
+                                "
+                                >SYSTEM OK</span
+                            >
+                        </div>
+                    </div>
+                    <div id="telemetry-output">
+                        <!-- Simulated telemetry outputs -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Pane: Real-Time Viewport (Three.js WebGL) -->
+            <div class="right-pane">
+                <button class="reset-phys-btn" id="btn-reset-phys">
+                    Reset Robot Position
+                </button>
+                <div class="viewport-overlay">
+                    <h3>Simulation Diagnostics</h3>
+                    <p>
+                        Drive wheels use a simulated Mecanum physics binder
+                        mapping real-time motor powers directly into physical
+                        kinetic forces.
+                    </p>
+                    <div class="controls-legend">
+                        <span class="key-cap">W</span>
+                        <span class="key-cap">A</span>
+                        <span class="key-cap">S</span>
+                        <span class="key-cap">D</span>
+                        <span
+                            class="text"
+                            style="
+                                font-size: 0.75rem;
+                                color: var(--text-main);
+                                margin-right: 6px;
+                            "
+                            >Drive/Strafe</span
+                        >
+                        <span class="key-cap">Q</span>
+                        <span class="key-cap">E</span>
+                        <span
+                            class="text"
+                            style="font-size: 0.75rem; color: var(--text-main)"
+                            >Turn Chassis</span
+                        >
+                    </div>
+                </div>
+                <div id="canvas-container"></div>
+            </div>
+        </div>
+
+        <!-- Script Logic implementation -->
+        <script type="module">
+            import * as THREE from "three";
+            import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+            import RAPIER from "@dimforge/rapier3d-compat";
+
+            // Code Templates
+            const templates = {
+                teleop: `// Standard FTC Mecanum TeleOp Program
+// Press INIT, then START above to run.
+// Keyboard binds: WASD (drive/strafe), Q/E (turn)
+
+telemetry.addData("Status", "OpMode Ready. Press start!");
+telemetry.update();
+
+waitForStart();
+
+while (opModeIsActive()) {
+    // Collect simulated gamepad input axes
+    double drive  = -gamepad1.left_stick_y;
+    double strafe = gamepad1.left_stick_x;
+    double turn   = gamepad1.right_stick_x;
+
+    // Standard Holonomic drive algorithm mapping
+    double fl = drive + strafe + turn;
+    double bl = drive - strafe + turn;
+    double fr = drive - strafe - turn;
+    double br = drive + strafe - turn;
+
+    // Constrain power boundary strictly within [-1.0, 1.0]
+    double max = Math.max(Math.max(Math.abs(fl), Math.abs(fr)), Math.max(Math.abs(bl), Math.abs(br)));
+    if (max > 1.0) {
+        fl /= max;
+        bl /= max;
+        fr /= max;
+        br /= max;
+    }
+
+    // Set motor powers
+    frontLeft.setPower(fl);
+    backLeft.setPower(bl);
+    frontRight.setPower(fr);
+    backRight.setPower(br);
+
+    // Stream telemetry back to the driver terminal
+    telemetry.addData("Status", "TeleOp Mode Active");
+    telemetry.addData("Drive Axis", drive);
+    telemetry.addData("Strafe Axis", strafe);
+    telemetry.addData("Turn Axis", turn);
+    telemetry.update();
+}`,
+                auto: `// Standard FTC Autonomous (Square Path Challenge with Encoders)
+// Showcases target encoder modes and proportional control
+// Press INIT, then START above to execute.
+
+telemetry.addData("Status", "Encoder Auto Compiled!");
+telemetry.update();
+
+waitForStart();
+
+if (opModeIsActive()) {
+    // 1. Reset Encoders
+    frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    sleep(100);
+
+    // 2. Set Target Positions to move forward
+    frontLeft.setTargetPosition(1200);
+    frontRight.setTargetPosition(1200);
+    backLeft.setTargetPosition(1200);
+    backRight.setTargetPosition(1200);
+
+    // 3. Set Run Mode
+    frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+    // 4. Power up
+    frontLeft.setPower(0.5);
+    frontRight.setPower(0.5);
+    backLeft.setPower(0.5);
+    backRight.setPower(0.5);
+
+    // Wait until motors reach target
+    while (opModeIsActive() && frontLeft.isBusy()) {
+        telemetry.addData("Path", "Driving to Target 1200 ticks");
+        telemetry.addData("FL Pos", frontLeft.getCurrentPosition());
+        telemetry.update();
+        sleep(20);
+    }
+
+    // Stop and wait
+    frontLeft.setPower(0.0);
+    frontRight.setPower(0.0);
+    backLeft.setPower(0.0);
+    backRight.setPower(0.0);
+    sleep(500);
+
+    // 5. Spin Turn Right 800 ticks
+    frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    backRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    sleep(100);
+
+    frontLeft.setTargetPosition(800);
+    frontRight.setTargetPosition(-800);
+    backLeft.setTargetPosition(800);
+    backRight.setTargetPosition(-800);
+
+    frontLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    frontRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    backLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+
+    frontLeft.setPower(0.5);
+    frontRight.setPower(0.5);
+    backLeft.setPower(0.5);
+    backRight.setPower(0.5);
+
+    while (opModeIsActive() && frontLeft.isBusy()) {
+        telemetry.addData("Path", "Spinning Right to target");
+        telemetry.addData("FL Pos", frontLeft.getCurrentPosition());
+        telemetry.update();
+        sleep(20);
+    }
+
+    frontLeft.setPower(0.0);
+    frontRight.setPower(0.0);
+    backLeft.setPower(0.0);
+    backRight.setPower(0.0);
+    telemetry.addData("Status", "Complete!");
+    telemetry.update();
+}`,
+            };
+
+            // Global code-state preservation cache to prevent code erasure on tab flip
+            const userCode = {
+                teleop: templates.teleop,
+                auto: templates.auto,
+            };
+
+            // Track the most recently active code tab to resolve background compilation
+            let lastCodeTab = "teleop";
+
+            // Global template switching hook
+            window.switchTemplate = function (type) {
+                document
+                    .querySelectorAll(".tab-btn")
+                    .forEach((b) => b.classList.remove("active"));
+                document.getElementById(`tab-${type}`).classList.add("active");
+
+                const editorDom = document.getElementById("editor-container");
+                const helpDom = document.getElementById("help-container");
+                const configDom = document.getElementById("config-container");
+
+                if (type === "help") {
+                    if (editorDom) editorDom.style.display = "none";
+                    if (configDom) configDom.style.display = "none";
+                    if (helpDom) {
+                        helpDom.style.display = "block";
+                        // Re-trigger MathJax typesetting so it compiles cleanly
+                        if (window.MathJax && window.MathJax.typesetPromise) {
+                            window.MathJax.typesetPromise();
+                        }
+                    }
+                } else if (type === "config") {
+                    if (editorDom) editorDom.style.display = "none";
+                    if (helpDom) helpDom.style.display = "none";
+                    if (configDom) configDom.style.display = "block";
+                } else {
+                    if (editorDom) editorDom.style.display = "block";
+                    if (helpDom) helpDom.style.display = "none";
+                    if (configDom) configDom.style.display = "none";
+
+                    lastCodeTab = type;
+                    if (window.editor && userCode[type] !== undefined) {
+                        window.editor.setValue(userCode[type]);
+
+                        // Force Monaco to recalculate its visual dimensions inside a micro-delay
+                        setTimeout(() => {
+                            if (window.editor) {
+                                window.editor.layout();
+                            }
+                        }, 10);
+                    }
+                }
+            };
+
+            window.onload = async () => {
+                // --- Load Monaco Editor ---
+                require.config({
+                    paths: {
+                        vs: "https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.39.0/min/vs",
+                    },
+                });
+                require(["vs/editor/editor.main"], function () {
+                    window.editor = monaco.editor.create(
+                        document.getElementById("editor-container"),
+                        {
+                            value: userCode.teleop,
+                            language: "java",
+                            theme: "vs-dark",
+                            automaticLayout: true,
+                            minimap: { enabled: false },
+                            fontSize: 13,
+                            lineHeight: 20,
+                            padding: { top: 10, bottom: 10 },
+                            roundedSelection: true,
+                            scrollBeyondLastLine: false,
+                            cursorBlinking: "smooth",
+                            cursorSmoothCaretAnimation: "on",
+                        },
+                    );
+
+                    // Live monitor of edits to seamlessly preserve changes across workspace tab flips
+                    window.editor.onDidChangeModelContent(() => {
+                        const activeTab =
+                            document.querySelector(".tab-btn.active");
+                        if (activeTab) {
+                            if (activeTab.id === "tab-teleop") {
+                                userCode.teleop = window.editor.getValue();
+                            } else if (activeTab.id === "tab-auto") {
+                                userCode.auto = window.editor.getValue();
+                            }
+                        }
+                    });
+                });
+
+                // --- 1. Physics Setup (Rapier.js) ---
+                await RAPIER.init();
+                const gravity = { x: 0.0, y: -9.81, z: 0.0 };
+                const world = new RAPIER.World(gravity);
+
+                // --- 2. Graphics Setup (Three.js) ---
+                const container = document.getElementById("canvas-container");
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x0a0c10);
+                scene.fog = new THREE.Fog(0x0a0c10, 6, 18);
+
+                const camera = new THREE.PerspectiveCamera(
+                    45,
+                    container.clientWidth / container.clientHeight,
+                    0.1,
+                    100,
+                );
+                camera.position.set(0, 3.8, 5.5);
+
+                const renderer = new THREE.WebGLRenderer({
+                    antialias: true,
+                    powerPreference: "high-performance",
+                });
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+                renderer.shadowMap.enabled = true;
+                renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+                container.appendChild(renderer.domElement);
+
+                const controls = new OrbitControls(camera, renderer.domElement);
+                controls.enableDamping = true;
+                controls.dampingFactor = 0.05;
+                controls.maxPolarAngle = Math.PI / 2 - 0.05; // Stay above ground plane
+
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
+                scene.add(ambientLight);
+
+                const dirLight = new THREE.DirectionalLight(0xffffff, 1.25);
+                dirLight.position.set(6, 12, 6);
+                dirLight.castShadow = true;
+                dirLight.shadow.mapSize.width = 1024;
+                dirLight.shadow.mapSize.height = 1024;
+                dirLight.shadow.camera.near = 0.5;
+                dirLight.shadow.camera.far = 25;
+                const d = 4;
+                dirLight.shadow.camera.left = -d;
+                dirLight.shadow.camera.right = d;
+                dirLight.shadow.camera.top = d;
+                dirLight.shadow.camera.bottom = -d;
+                scene.add(dirLight);
+
+                // Grid ground & boundary creation
+                const fieldSize = 3.6576; // Standard FTC Field (12x12ft)
+                const floorThickness = 0.1;
+
+                const floorGeo = new THREE.BoxGeometry(
+                    fieldSize,
+                    floorThickness,
+                    fieldSize,
+                );
+                const floorMat = new THREE.MeshStandardMaterial({
+                    color: 0x111622,
+                    roughness: 0.9,
+                    metalness: 0.1,
+                });
+                const floorMesh = new THREE.Mesh(floorGeo, floorMat);
+                floorMesh.receiveShadow = true;
+                floorMesh.position.y = -floorThickness / 2;
+                scene.add(floorMesh);
+
+                const gridHelper = new THREE.GridHelper(
+                    fieldSize,
+                    6,
+                    0x3b82f6,
+                    0x1e293b,
+                );
+                gridHelper.position.y = 0.001;
+                scene.add(gridHelper);
+
+                // Ground Rigid Body
+                const groundBodyDesc =
+                    RAPIER.RigidBodyDesc.fixed().setTranslation(
+                        0,
+                        -floorThickness / 2,
+                        0,
+                    );
+                const groundBody = world.createRigidBody(groundBodyDesc);
+                const groundColliderDesc = RAPIER.ColliderDesc.cuboid(
+                    fieldSize / 2,
+                    floorThickness / 2,
+                    fieldSize / 2,
+                );
+                const groundCollider = world.createCollider(
+                    groundColliderDesc,
+                    groundBody,
+                );
+                groundCollider.setFriction(0.2);
+                groundCollider.setRestitution(0.1);
+
+                // Field Walls (Visual & Physics Boundaries)
+                function createWall(w, h, d, x, y, z, color) {
+                    const wallGeo = new THREE.BoxGeometry(w, h, d);
+                    const wallMat = new THREE.MeshStandardMaterial({
+                        color: color,
+                        roughness: 0.5,
+                        transparent: true,
+                        opacity: 0.4,
+                    });
+                    const wallMesh = new THREE.Mesh(wallGeo, wallMat);
+                    wallMesh.position.set(x, y, z);
+                    scene.add(wallMesh);
+
+                    const wallBodyDesc =
+                        RAPIER.RigidBodyDesc.fixed().setTranslation(x, y, z);
+                    const wallBody = world.createRigidBody(wallBodyDesc);
+                    const wallColliderDesc = RAPIER.ColliderDesc.cuboid(
+                        w / 2,
+                        h / 2,
+                        d / 2,
+                    );
+                    const wallCollider = world.createCollider(
+                        wallColliderDesc,
+                        wallBody,
+                    );
+                    wallCollider.setFriction(0.2);
+                    wallCollider.setRestitution(0.1);
+                }
+                const wallHeight = 0.35;
+                createWall(
+                    fieldSize,
+                    wallHeight,
+                    0.05,
+                    0,
+                    wallHeight / 2,
+                    -fieldSize / 2,
+                    0xef4444,
+                ); // Red Wall
+                createWall(
+                    fieldSize,
+                    wallHeight,
+                    0.05,
+                    0,
+                    wallHeight / 2,
+                    fieldSize / 2,
+                    0x3b82f6,
+                ); // Blue Wall
+                createWall(
+                    0.05,
+                    wallHeight,
+                    fieldSize,
+                    -fieldSize / 2,
+                    wallHeight / 2,
+                    0,
+                    0x334155,
+                );
+                createWall(
+                    0.05,
+                    wallHeight,
+                    fieldSize,
+                    fieldSize / 2,
+                    wallHeight / 2,
+                    0,
+                    0x334155,
+                );
+
+                // --- 2.5 Scorable Obstacles (Scatter cubes for physics interaction) ---
+                const obstacleMaterial = new THREE.MeshStandardMaterial({
+                    color: 0xeab308,
+                    roughness: 0.5,
+                });
+                const obstacleGeo = new THREE.BoxGeometry(0.15, 0.15, 0.15); // FTC scoring size
+                const obstacles = [];
+
+                function spawnObstacles() {
+                    // Clear old obstacles
+                    obstacles.forEach((o) => {
+                        scene.remove(o.mesh);
+                        world.removeRigidBody(o.body);
+                    });
+                    obstacles.length = 0;
+
+                    const coords = [
+                        [0.5, 0.5, 0.5],
+                        [-0.6, 0.5, 0.8],
+                        [0.8, 0.5, -0.6],
+                        [-0.5, 0.5, -0.5],
+                    ];
+
+                    coords.forEach(([x, y, z]) => {
+                        const m = new THREE.Mesh(obstacleGeo, obstacleMaterial);
+                        m.castShadow = true;
+                        m.receiveShadow = true;
+                        scene.add(m);
+
+                        const bd = RAPIER.RigidBodyDesc.dynamic()
+                            .setTranslation(x, y, z)
+                            .setLinearDamping(1.0)
+                            .setAngularDamping(1.0);
+                        const b = world.createRigidBody(bd);
+                        const cd = RAPIER.ColliderDesc.cuboid(
+                            0.075,
+                            0.075,
+                            0.075,
+                        ).setMass(1.0);
+                        const oCollider = world.createCollider(cd, b);
+                        oCollider.setFriction(0.2);
+                        oCollider.setRestitution(0.1);
+
+                        obstacles.push({ mesh: m, body: b });
+                    });
+                }
+                spawnObstacles();
+
+                // --- 3. Robot Construction ---
+                const robotSize = 0.45; // ~18 inches
+                const robotGroup = new THREE.Group();
+
+                // Metal frame look
+                const chassisGeo = new THREE.BoxGeometry(
+                    robotSize,
+                    robotSize * 0.4,
+                    robotSize,
+                );
+                const chassisMat = new THREE.MeshStandardMaterial({
+                    color: 0x1e293b,
+                    roughness: 0.2,
+                    metalness: 0.8,
+                });
+                const chassisMesh = new THREE.Mesh(chassisGeo, chassisMat);
+                chassisMesh.castShadow = true;
+                chassisMesh.receiveShadow = true;
+                robotGroup.add(chassisMesh);
+
+                // LED bar indicating orientation
+                const indicatorGeo = new THREE.BoxGeometry(
+                    robotSize * 0.9,
+                    0.04,
+                    0.04,
+                );
+                const indicatorMat = new THREE.MeshStandardMaterial({
+                    color: 0x3b82f6,
+                    emissive: 0x3b82f6,
+                    emissiveIntensity: 1.0,
+                });
+                const indicatorMesh = new THREE.Mesh(
+                    indicatorGeo,
+                    indicatorMat,
+                );
+                indicatorMesh.position.set(
+                    0,
+                    robotSize * 0.1,
+                    robotSize / 2 - 0.02,
+                );
+                robotGroup.add(indicatorMesh);
+
+                // Visual drive wheel group setup
+                const wheels = { fl: null, fr: null, bl: null, br: null };
+                const wX = robotSize / 2 + 0.035;
+                const wY = -0.06;
+                const wZ = robotSize / 2 - 0.08;
+
+                // Customizable physical & visual parameters
+                let motorSpecs = { maxRpm: 312, ticksPerRev: 537.7 };
+                let extGearRatio = 1.0;
+                let wheelType = "mecanum"; // mecanum, traction, omni
+                let zeroPowerBehaviorGlobal = "brake"; // brake, float
+
+                // Rebuild Wheel Visuals dynamically based on selected Wheel Type
+                function rebuildWheels() {
+                    // Remove old wheels if they exist
+                    Object.keys(wheels).forEach((key) => {
+                        if (wheels[key]) {
+                            robotGroup.remove(wheels[key]);
+                        }
+                    });
+
+                    function createWheelMesh(key, isRight) {
+                        const group = new THREE.Group();
+                        const wheelGeo = new THREE.CylinderGeometry(
+                            0.07,
+                            0.07,
+                            0.06,
+                            24,
+                        );
+                        wheelGeo.rotateZ(Math.PI / 2);
+
+                        let wheelColor = 0x090d16;
+                        if (wheelType === "traction") wheelColor = 0x374151; // Grippy dark grey
+                        if (wheelType === "omni") wheelColor = 0x1f2937; // Medium grey
+
+                        const wheelMat = new THREE.MeshStandardMaterial({
+                            color: wheelColor,
+                            roughness: 0.9,
+                        });
+                        const wheelMesh = new THREE.Mesh(wheelGeo, wheelMat);
+                        wheelMesh.castShadow = true;
+                        group.add(wheelMesh);
+
+                        if (wheelType === "mecanum") {
+                            // Add angled rollers to simulate Mecanum
+                            const rollerGeo = new THREE.CylinderGeometry(
+                                0.015,
+                                0.015,
+                                0.055,
+                                8,
+                            );
+                            rollerGeo.rotateX(Math.PI / 2);
+                            const rollerMat = new THREE.MeshStandardMaterial({
+                                color: 0xd1d5db,
+                                roughness: 0.6,
+                            });
+
+                            for (let i = 0; i < 8; i++) {
+                                const roller = new THREE.Mesh(
+                                    rollerGeo,
+                                    rollerMat,
+                                );
+                                const angle = (i / 8) * Math.PI * 2;
+                                roller.position.set(
+                                    0,
+                                    Math.cos(angle) * 0.06,
+                                    Math.sin(angle) * 0.06,
+                                );
+                                roller.rotation.y = isRight
+                                    ? Math.PI / 4
+                                    : -Math.PI / 4;
+                                group.add(roller);
+                            }
+                        } else if (wheelType === "traction") {
+                            // Add aggressive rubber treads on tire surface
+                            const treadGeo = new THREE.BoxGeometry(
+                                0.01,
+                                0.01,
+                                0.07,
+                            );
+                            const treadMat = new THREE.MeshStandardMaterial({
+                                color: 0x111827,
+                            });
+                            for (let i = 0; i < 12; i++) {
+                                const tread = new THREE.Mesh(
+                                    treadGeo,
+                                    treadMat,
+                                );
+                                const angle = (i / 12) * Math.PI * 2;
+                                tread.position.set(
+                                    0,
+                                    Math.cos(angle) * 0.07,
+                                    Math.sin(angle) * 0.07,
+                                );
+                                tread.rotation.x = angle;
+                                group.add(tread);
+                            }
+                        } else if (wheelType === "omni") {
+                            // Add circumferential perpendicular rollers
+                            const subRollerGeo = new THREE.CylinderGeometry(
+                                0.018,
+                                0.018,
+                                0.02,
+                                8,
+                            );
+                            const subRollerMat = new THREE.MeshStandardMaterial(
+                                { color: 0x6b7280 },
+                            );
+                            for (let i = 0; i < 6; i++) {
+                                const subRoller = new THREE.Mesh(
+                                    subRollerGeo,
+                                    subRollerMat,
+                                );
+                                const angle = (i / 6) * Math.PI * 2;
+                                subRoller.position.set(
+                                    0,
+                                    Math.cos(angle) * 0.07,
+                                    Math.sin(angle) * 0.07,
+                                );
+                                subRoller.rotation.x = angle;
+                                group.add(subRoller);
+                            }
+                        }
+                        return group;
+                    }
+
+                    wheels.fl = createWheelMesh("fl", false);
+                    wheels.fr = createWheelMesh("fr", true);
+                    wheels.bl = createWheelMesh("bl", false);
+                    wheels.br = createWheelMesh("br", true);
+
+                    wheels.fl.position.set(wX, wY, wZ);
+                    wheels.fr.position.set(-wX, wY, wZ);
+                    wheels.bl.position.set(wX, wY, -wZ);
+                    wheels.br.position.set(-wX, wY, -wZ);
+
+                    Object.values(wheels).forEach((w) => robotGroup.add(w));
+                }
+
+                rebuildWheels();
+                scene.add(robotGroup);
+
+                // Physical Rigid Body Setup (Encompassing visual wheel depth to prevent clipping)
+                const startY = 0.5;
+                const robotBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+                    .setTranslation(0, startY, 0)
+                    .setLinearDamping(6.0)
+                    .setAngularDamping(6.0);
+                const robotBody = world.createRigidBody(robotBodyDesc);
+
+                // Adjusted Collider dimensions: height = 0.26 (half-height = 0.13), keeping wheel base perfectly resting on floor.
+                const robotColliderDesc = RAPIER.ColliderDesc.cuboid(
+                    robotSize / 2 + 0.04,
+                    0.13,
+                    robotSize / 2,
+                ).setMass(12.0);
+                const robotCollider = world.createCollider(
+                    robotColliderDesc,
+                    robotBody,
+                );
+                robotCollider.setFriction(0.2);
+                robotCollider.setRestitution(0.1);
+
+                // --- 4. FTC SDK Device Mappings ---
+                // Enums
+                const DcMotorEnums = {
+                    RunMode: {
+                        RUN_WITHOUT_ENCODER: "RUN_WITHOUT_ENCODER",
+                        RUN_USING_ENCODER: "RUN_USING_ENCODER",
+                        RUN_TO_POSITION: "RUN_TO_POSITION",
+                        STOP_AND_RESET_ENCODER: "STOP_AND_RESET_ENCODER",
+                    },
+                    ZeroPowerBehavior: {
+                        BRAKE: "BRAKE",
+                        FLOAT: "FLOAT",
+                    },
+                    Direction: {
+                        FORWARD: "FORWARD",
+                        REVERSE: "REVERSE",
+                    },
+                };
+
+                class DcMotor {
+                    constructor(name) {
+                        this.name = name;
+                        this.power = 0;
+                        this.position = 0;
+                        this.targetPosition = 0;
+                        this.mode = DcMotorEnums.RunMode.RUN_WITHOUT_ENCODER;
+                        this.zeroPowerBehavior =
+                            DcMotorEnums.ZeroPowerBehavior.BRAKE;
+                        this.direction = DcMotorEnums.Direction.FORWARD;
+
+                        // Internal mechanical configuration
+                        this.maxRpm = 312;
+                        this.ticksPerRev = 537.7;
+                    }
+
+                    setPower(power) {
+                        this.power = Math.max(-1, Math.min(1, power || 0));
+                    }
+                    getPower() {
+                        return this.power;
+                    }
+
+                    getCurrentPosition() {
+                        return Math.floor(this.position);
+                    }
+
+                    setTargetPosition(target) {
+                        this.targetPosition = target;
+                    }
+                    getTargetPosition() {
+                        return this.targetPosition;
+                    }
+
+                    setMode(mode) {
+                        this.mode = mode;
+                        if (
+                            mode === DcMotorEnums.RunMode.STOP_AND_RESET_ENCODER
+                        ) {
+                            this.position = 0;
+                        }
+                    }
+                    getMode() {
+                        return this.mode;
+                    }
+
+                    setZeroPowerBehavior(behavior) {
+                        this.zeroPowerBehavior = behavior;
+                    }
+                    getZeroPowerBehavior() {
+                        return this.zeroPowerBehavior;
+                    }
+
+                    setDirection(dir) {
+                        this.direction = dir;
+                    }
+                    getDirection() {
+                        return this.direction;
+                    }
+
+                    isBusy() {
+                        if (this.mode !== DcMotorEnums.RunMode.RUN_TO_POSITION)
+                            return false;
+                        return (
+                            Math.abs(this.targetPosition - this.position) > 15
+                        );
+                    }
+
+                    _simulatePhysicsStep(deltaTime, currentRpm, currentPpr) {
+                        this.maxRpm = currentRpm;
+                        this.ticksPerRev = currentPpr;
+
+                        // Reverse direction modifier
+                        const dirMultiplier =
+                            this.direction === DcMotorEnums.Direction.REVERSE
+                                ? -1
+                                : 1;
+                        let targetPower = this.power;
+
+                        // Handle RUN_TO_POSITION proportional logic
+                        if (
+                            this.mode === DcMotorEnums.RunMode.RUN_TO_POSITION
+                        ) {
+                            const error = this.targetPosition - this.position;
+                            if (Math.abs(error) > 10) {
+                                // Simple proportional control loop
+                                const kp = 0.004;
+                                targetPower =
+                                    Math.max(-1, Math.min(1, error * kp)) *
+                                    Math.abs(this.power);
+                            } else {
+                                targetPower = 0;
+                            }
+                        }
+
+                        const speedRatio = targetPower * dirMultiplier;
+                        this.position +=
+                            speedRatio *
+                            (this.maxRpm / 60) *
+                            this.ticksPerRev *
+                            extGearRatio *
+                            deltaTime;
+                        return speedRatio;
+                    }
+                }
+
+                const flMotor = new DcMotor("frontLeft");
+                const frMotor = new DcMotor("frontRight");
+                const blMotor = new DcMotor("backLeft");
+                const brMotor = new DcMotor("backRight");
+
+                // Keyboard and Gamepad simulation hooks
+                class Gamepad {
+                    constructor() {
+                        this.left_stick_x = 0;
+                        this.left_stick_y = 0;
+                        this.right_stick_x = 0;
+                        this.right_stick_y = 0;
+                    }
+                    update(keys) {
+                        // Support standard HTML5 Gamepad API
+                        const gamepads = navigator.getGamepads
+                            ? navigator.getGamepads()
+                            : [];
+                        const pad = gamepads[0];
+
+                        let lx = 0,
+                            ly = 0,
+                            rx = 0;
+                        if (pad) {
+                            const deadzone = 0.08;
+                            const apply = (v) =>
+                                Math.abs(v) > deadzone ? v : 0;
+                            lx = apply(pad.axes[0] || 0);
+                            ly = apply(pad.axes[1] || 0);
+                            rx = apply(pad.axes[2] || 0);
+                        }
+
+                        // Fallback WASD keyboard emulation overrides
+                        if (keys.w) ly -= 1;
+                        if (keys.s) ly += 1;
+                        if (keys.d) lx += 1;
+                        if (keys.a) lx -= 1;
+                        if (keys.q) rx -= 1;
+                        if (keys.e) rx += 1;
+
+                        this.left_stick_x = Math.max(-1, Math.min(1, lx));
+                        this.left_stick_y = Math.max(-1, Math.min(1, ly));
+                        this.right_stick_x = Math.max(-1, Math.min(1, rx));
+                    }
+                }
+                const gamepad1 = new Gamepad();
+
+                // Advanced Live Terminal Telemetry Handler
+                class Telemetry {
+                    constructor(element) {
+                        this.element = element;
+                        this.lines = new Map();
+                    }
+                    addData(key, value) {
+                        const formatted =
+                            typeof value === "number"
+                                ? value.toFixed(3)
+                                : value;
+                        this.lines.set(key, formatted);
+                    }
+                    update() {
+                        let html = "";
+                        for (let [k, v] of this.lines) {
+                            html += `<div style="margin-bottom: 4px;"><span style="color: #60a5fa; font-weight:bold;">${k}:</span> ${v}</div>`;
+                        }
+                        this.element.innerHTML = html;
+                    }
+                    clear() {
+                        this.lines.clear();
+                        this.element.innerHTML = `<span style="color: var(--text-muted);">Console Empty... Ready.</span>`;
+                    }
+                }
+                const telemetryMock = new Telemetry(
+                    document.getElementById("telemetry-output"),
+                );
+
+                // --- 5. Physical Drive Binder Engine ---
+                class SimulatorDriveBinder {
+                    constructor(chassisBody, visualWheels) {
+                        this.chassisBody = chassisBody;
+                        this.wheels = visualWheels;
+                    }
+                    update(deltaTime) {
+                        const flP = flMotor._simulatePhysicsStep(
+                            deltaTime,
+                            motorSpecs.maxRpm,
+                            motorSpecs.ticksPerRev,
+                        );
+                        const frP = frMotor._simulatePhysicsStep(
+                            deltaTime,
+                            motorSpecs.maxRpm,
+                            motorSpecs.ticksPerRev,
+                        );
+                        const blP = blMotor._simulatePhysicsStep(
+                            deltaTime,
+                            motorSpecs.maxRpm,
+                            motorSpecs.ticksPerRev,
+                        );
+                        const brP = brMotor._simulatePhysicsStep(
+                            deltaTime,
+                            motorSpecs.maxRpm,
+                            motorSpecs.ticksPerRev,
+                        );
+
+                        // Rotate 3D mesh wheels visually based on motor direction speeds
+                        const rotSpeed = 16 * extGearRatio * deltaTime;
+                        if (this.wheels.fl)
+                            this.wheels.fl.rotation.x -= flP * rotSpeed;
+                        if (this.wheels.fr)
+                            this.wheels.fr.rotation.x -= frP * rotSpeed;
+                        if (this.wheels.bl)
+                            this.wheels.bl.rotation.x -= blP * rotSpeed;
+                        if (this.wheels.br)
+                            this.wheels.br.rotation.x -= brP * rotSpeed;
+
+                        // Standard holonomic/mecanum math to convert motor power into vectors
+                        let forward = 0;
+                        let strafe = 0;
+                        let turn = 0;
+
+                        if (wheelType === "mecanum") {
+                            // Mecanum: full holonomic translation
+                            forward = (flP + frP + blP + brP) / 4;
+                            strafe = (flP - frP - blP + brP) / 4;
+                            turn = (-flP + frP - blP + brP) / 4;
+                        } else if (wheelType === "traction") {
+                            // Standard: no strafing capability (translates to high lateral friction in calculations)
+                            forward = (flP + frP + blP + brP) / 4;
+                            strafe = 0; // Strafe component cancelled
+                            turn = (-flP + frP - blP + brP) / 4;
+                        } else if (wheelType === "omni") {
+                            // Omni: moves forward and turns, side-slips easily
+                            forward = (flP + frP + blP + brP) / 4;
+                            strafe = ((flP - frP - blP + brP) / 4) * 0.7; // Strafe operates at higher slip
+                            turn = (-flP + frP - blP + brP) / 4;
+                        }
+
+                        // Apply Dynamic Zero Power Behavior Damping
+                        const brakeActive = zeroPowerBehaviorGlobal === "brake";
+                        const idle =
+                            Math.abs(flP) < 0.01 &&
+                            Math.abs(frP) < 0.01 &&
+                            Math.abs(blP) < 0.01 &&
+                            Math.abs(brP) < 0.01;
+
+                        if (idle && brakeActive) {
+                            // Apply high mechanical damping force when braking
+                            this.chassisBody.setLinearDamping(15.0);
+                            this.chassisBody.setAngularDamping(15.0);
+                        } else {
+                            // Normal low friction glide damping
+                            this.chassisBody.setLinearDamping(6.0);
+                            this.chassisBody.setAngularDamping(6.0);
+                        }
+
+                        // Adjust translation constants by motor gear ratio settings
+                        const speedScale = motorSpecs.maxRpm / 312.0;
+                        const IMPULSE_CONSTANT =
+                            0.95 * speedScale * (1 / extGearRatio);
+                        const TORQUE_CONSTANT =
+                            0.16 * speedScale * (1 / extGearRatio);
+
+                        const rot = this.chassisBody.rotation();
+                        const q = new THREE.Quaternion(
+                            rot.x,
+                            rot.y,
+                            rot.z,
+                            rot.w,
+                        );
+
+                        // Calculate directional forces respecting current chassis angle (local coords)
+                        const force = new THREE.Vector3(
+                            -strafe * IMPULSE_CONSTANT,
+                            0,
+                            forward * IMPULSE_CONSTANT,
+                        );
+                        force.applyQuaternion(q);
+
+                        const torque = new THREE.Vector3(
+                            0,
+                            -turn * TORQUE_CONSTANT,
+                            0,
+                        );
+                        torque.applyQuaternion(q);
+
+                        this.chassisBody.applyImpulse(force, true);
+                        this.chassisBody.applyTorqueImpulse(torque, true);
+                    }
+                }
+                const simBinder = new SimulatorDriveBinder(robotBody, wheels);
+
+                // Physical State Resetter
+                document
+                    .getElementById("btn-reset-phys")
+                    .addEventListener("click", () => {
+                        robotBody.setTranslation(
+                            { x: 0, y: startY, z: 0 },
+                            true,
+                        );
+                        robotBody.setLinvel({ x: 0, y: 0, z: 0 }, true);
+                        robotBody.setAngvel({ x: 0, y: 0, z: 0 }, true);
+                        robotBody.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+
+                        spawnObstacles();
+
+                        telemetryMock.addData(
+                            "System Status",
+                            "Physical entities reset successfully",
+                        );
+                        telemetryMock.update();
+                    });
+
+                // Keyboard State Monitors
+                const keys = {
+                    w: false,
+                    a: false,
+                    s: false,
+                    d: false,
+                    q: false,
+                    e: false,
+                };
+                window.addEventListener("keydown", (e) => {
+                    const k = e.key.toLowerCase();
+                    if (keys.hasOwnProperty(k)) keys[k] = true;
+                });
+                window.addEventListener("keyup", (e) => {
+                    const k = e.key.toLowerCase();
+                    if (keys.hasOwnProperty(k)) keys[k] = false;
+                });
+
+                // --- 6. The Generator-Based Interpreter Core ---
+                const GeneratorFunction = Object.getPrototypeOf(
+                    function* () {},
+                ).constructor;
+
+                let opModeState = "STOPPED"; // STOPPED, INIT, RUNNING
+                let opModeIterator = null;
+
+                function* waitForStartGen() {
+                    while (opModeState !== "RUNNING") {
+                        if (opModeState === "STOPPED") return;
+                        yield;
+                    }
+                }
+
+                function* sleepGen(ms) {
+                    const start = performance.now();
+                    while (performance.now() - start < ms) {
+                        if (opModeState === "STOPPED") return;
+                        yield;
+                    }
+                }
+
+                function opModeIsActiveFn() {
+                    return opModeState === "RUNNING";
+                }
+
+                // FTC Mock Hardware Constants Mapping inside Generator Execution
+                const DcMotorMockAPI = {
+                    RunMode: DcMotorEnums.RunMode,
+                    ZeroPowerBehavior: DcMotorEnums.ZeroPowerBehavior,
+                    Direction: DcMotorEnums.Direction,
+                };
+
+                function compileAndInitOpMode() {
+                    const javaCode = window.editor
+                        ? window.editor.getValue()
+                        : userCode[lastCodeTab];
+
+                    // 1. Lightweight Transpiler translating common Java syntax definitions to JS
+                    let jsCode = javaCode
+                        .replace(/\bdouble\b/g, "let")
+                        .replace(/\bint\b/g, "let")
+                        .replace(/\bfloat\b/g, "let")
+                        .replace(/\bboolean\b/g, "let")
+                        // Injection of safe execution yielding inside loops to maintain thread health
+                        .replace(
+                            /while\s*\((.*?)\)\s*\{/g,
+                            "while($1) { yield; ",
+                        )
+                        .replace(/for\s*\((.*?)\)\s*\{/g, "for($1) { yield; ")
+                        // Mapping blocking calls to generator yields
+                        .replace(
+                            /\bwaitForStart\s*\(\s*\)/g,
+                            "yield* waitForStart()",
+                        )
+                        .replace(
+                            /\bsleep\s*\(\s*(.*?)\s*\)/g,
+                            "yield* sleep($1)",
+                        );
+
+                    try {
+                        // 2. Wrap sandbox inside isolated runtime
+                        const genFn = new GeneratorFunction(
+                            "frontLeft",
+                            "frontRight",
+                            "backLeft",
+                            "backRight",
+                            "gamepad1",
+                            "telemetry",
+                            "waitForStart",
+                            "sleep",
+                            "opModeIsActive",
+                            "Math",
+                            "DcMotor",
+                            jsCode,
+                        );
+
+                        // 3. Bind Sandbox Variables
+                        opModeIterator = genFn(
+                            flMotor,
+                            frMotor,
+                            blMotor,
+                            brMotor,
+                            gamepad1,
+                            telemetryMock,
+                            waitForStartGen,
+                            sleepGen,
+                            opModeIsActiveFn,
+                            Math,
+                            DcMotorMockAPI,
+                        );
+
+                        opModeState = "INIT";
+                        document.getElementById("ds-status-text").innerText =
+                            "INITIALIZED";
+                        document.getElementById("ds-status-text").style.color =
+                            "var(--accent-blue)";
+
+                        document.getElementById("btn-init").disabled = true;
+                        document.getElementById("btn-start").disabled = false;
+                        document.getElementById("btn-stop").disabled = false;
+
+                        flMotor.setPower(0);
+                        frMotor.setPower(0);
+                        blMotor.setPower(0);
+                        brMotor.setPower(0);
+                        telemetryMock.clear();
+                        telemetryMock.addData("Compilation Status", "Success!");
+                        telemetryMock.addData(
+                            "OpMode State",
+                            "Initialized. Awaiting Start.",
+                        );
+                        telemetryMock.update();
+                    } catch (e) {
+                        // Capture compilation faults and output directly to telemetry pane
+                        telemetryMock.lines.clear();
+                        telemetryMock.addData("Compiler Error", e.message);
+                        telemetryMock.addData(
+                            "Tips",
+                            "Verify brackets are matched and no syntax is incomplete.",
+                        );
+                        telemetryMock.update();
+                    }
+                }
+
+                // Driver Station Action Bindings
+                document
+                    .getElementById("btn-init")
+                    .addEventListener("click", compileAndInitOpMode);
+
+                document
+                    .getElementById("btn-start")
+                    .addEventListener("click", () => {
+                        if (opModeState === "INIT") {
+                            opModeState = "RUNNING";
+                            document.getElementById(
+                                "ds-status-text",
+                            ).innerText = "RUNNING";
+                            document.getElementById(
+                                "ds-status-text",
+                            ).style.color = "var(--accent-green)";
+                            document.getElementById("btn-start").disabled =
+                                true;
+                        }
+                    });
+
+                document
+                    .getElementById("btn-stop")
+                    .addEventListener("click", () => {
+                        opModeState = "STOPPED";
+                        opModeIterator = null;
+                        document.getElementById("ds-status-text").innerText =
+                            "STOPPED";
+                        document.getElementById("ds-status-text").style.color =
+                            "var(--accent-red)";
+
+                        document.getElementById("btn-init").disabled = false;
+                        document.getElementById("btn-start").disabled = true;
+                        document.getElementById("btn-stop").disabled = true;
+
+                        flMotor.setPower(0);
+                        frMotor.setPower(0);
+                        blMotor.setPower(0);
+                        brMotor.setPower(0);
+                        telemetryMock.clear();
+                    });
+
+                // --- Config Settings Panel Observers ---
+                document
+                    .getElementById("motor-type-select")
+                    .addEventListener("change", (e) => {
+                        const model = e.target.value;
+                        if (model === "gobilda_312") {
+                            motorSpecs = { maxRpm: 312, ticksPerRev: 537.7 };
+                        } else if (model === "gobilda_435") {
+                            motorSpecs = { maxRpm: 435, ticksPerRev: 383.6 };
+                        } else if (model === "gobilda_1150") {
+                            motorSpecs = { maxRpm: 1150, ticksPerRev: 145.1 };
+                        } else if (model === "neverest_40") {
+                            motorSpecs = { maxRpm: 160, ticksPerRev: 1120.0 };
+                        }
+                        telemetryMock.addData(
+                            "Config Updated",
+                            `Base Motor: ${model.toUpperCase()}`,
+                        );
+                        telemetryMock.update();
+                    });
+
+                document
+                    .getElementById("gear-ratio-input")
+                    .addEventListener("change", (e) => {
+                        extGearRatio = parseFloat(e.target.value);
+                        telemetryMock.addData(
+                            "Config Updated",
+                            `Gear Ratio set to: ${extGearRatio}:1`,
+                        );
+                        telemetryMock.update();
+                    });
+
+                document
+                    .getElementById("wheel-type-select")
+                    .addEventListener("change", (e) => {
+                        wheelType = e.target.value;
+                        rebuildWheels(); // Dynamically recreate 3D geometry
+                        telemetryMock.addData(
+                            "Config Updated",
+                            `Wheel Type set to: ${wheelType.toUpperCase()}`,
+                        );
+                        telemetryMock.update();
+                    });
+
+                document
+                    .getElementById("zero-power-select")
+                    .addEventListener("change", (e) => {
+                        zeroPowerBehaviorGlobal = e.target.value;
+                        telemetryMock.addData(
+                            "Config Updated",
+                            `Zero Power set to: ${zeroPowerBehaviorGlobal.toUpperCase()}`,
+                        );
+                        telemetryMock.update();
+                    });
+
+                // --- 7. Real-Time Graphics & Simulation Loop ---
+                const clock = new THREE.Clock();
+
+                function animate() {
+                    requestAnimationFrame(animate);
+                    const dt = Math.min(clock.getDelta(), 0.1); // Clamp physics delta spike on tab focus loss
+
+                    // Step physical engine
+                    world.step();
+
+                    // Map gamepad / keyboard updates
+                    gamepad1.update(keys);
+
+                    // Safely progress interpreter without freezing UI thread
+                    if (opModeIterator && opModeState !== "STOPPED") {
+                        try {
+                            const result = opModeIterator.next();
+                            if (result.done) {
+                                document.getElementById("btn-stop").click(); // Finish cleanly
+                            }
+                        } catch (e) {
+                            console.error("OpMode Runtime Error:", e);
+                            telemetryMock.addData("Runtime Fault", e.message);
+                            telemetryMock.update();
+                            document.getElementById("btn-stop").click();
+                        }
+                    }
+
+                    // Feed physics binder calculations
+                    simBinder.update(dt);
+
+                    // Render sync
+                    const pos = robotBody.translation();
+                    const rot = robotBody.rotation();
+                    robotGroup.position.set(pos.x, pos.y, pos.z);
+                    robotGroup.quaternion.set(rot.x, rot.y, rot.z, rot.w);
+
+                    // Sync Obstacle meshes
+                    obstacles.forEach((o) => {
+                        const oPos = o.body.translation();
+                        const oRot = o.body.rotation();
+                        o.mesh.position.set(oPos.x, oPos.y, oPos.z);
+                        o.mesh.quaternion.set(oRot.x, oRot.y, oRot.z, oRot.w);
+                    });
+
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+
+                animate();
+
+                // Window Resizing for the explicit container aspect
+                window.addEventListener("resize", () => {
+                    camera.aspect =
+                        container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(
+                        container.clientWidth,
+                        container.clientHeight,
+                    );
+                });
+
+                // Set default status message in telemetry
+                telemetryMock.clear();
+            };
+        </script>
+    </body>
+</html>
