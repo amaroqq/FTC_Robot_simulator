@@ -11,7 +11,7 @@
                 --bg-editor: #0d1117;
                 --border-color: #1f2937;
                 --text-main: #f1f5f9;
-                --text-muted: #94a3b8;
+                --text-muted: #95a3b8;
                 --accent-blue: #3b82f6;
                 --accent-blue-hover: #2563eb;
                 --accent-green: #10b981;
@@ -75,6 +75,7 @@
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                flex-shrink: 0;
             }
 
             .header h1 {
@@ -100,6 +101,7 @@
                 padding: 16px 20px;
                 background-color: rgba(15, 23, 42, 0.4);
                 border-bottom: 1px solid var(--border-color);
+                flex-shrink: 0;
             }
 
             .ds-header {
@@ -183,6 +185,7 @@
                 gap: 4px;
                 overflow-x: auto;
                 scrollbar-width: none;
+                flex-shrink: 0;
             }
             .tabs-container::-webkit-scrollbar {
                 display: none;
@@ -213,14 +216,16 @@
             /* Code Editor Container */
             .editor-wrapper {
                 flex-grow: 1;
-                display: flex;
-                flex-direction: column;
+                display: block;
                 position: relative;
                 min-height: 200px;
                 overflow: hidden;
             }
 
             #editor-container {
+                position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
                 background-color: var(--bg-editor);
@@ -228,6 +233,9 @@
 
             /* Configuration UI Container */
             #config-container {
+                position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
                 background-color: var(--bg-editor);
@@ -284,6 +292,9 @@
 
             /* Documentation Styles */
             #help-container {
+                position: absolute;
+                top: 0;
+                left: 0;
                 width: 100%;
                 height: 100%;
                 background-color: var(--bg-editor);
@@ -376,6 +387,7 @@
                 background-color: #090d16;
                 display: flex;
                 flex-direction: column;
+                flex-shrink: 0;
             }
 
             .telemetry-header {
@@ -523,18 +535,6 @@
                         <h1>FTC Virtual Lab</h1>
                         <p class="subtitle">LinearOpMode Compiler & Sandbox</p>
                     </div>
-                    <span
-                        style="
-                            font-size: 0.75rem;
-                            color: var(--accent-blue);
-                            font-weight: bold;
-                            padding: 4px 8px;
-                            background: rgba(59, 130, 246, 0.15);
-                            border-radius: 4px;
-                            border: 1px solid rgba(59, 130, 246, 0.3);
-                        "
-                        >PHASE 3 ACTIVE</span
-                    >
                 </div>
 
                 <!-- Driver Station Module -->
@@ -626,6 +626,19 @@
                     >
                         Help & Docs
                     </button>
+
+                    <!-- NEW: File Upload Button -->
+                    <div style="margin-left: auto; display: flex; gap: 4px; padding-bottom: 2px; align-items: center;">
+                        <input type="file" id="file-upload" accept=".java,.txt" style="display: none;" />
+                        <button class="tab-btn" style="color: var(--accent-blue); display: flex; align-items: center; gap: 6px;" onclick="document.getElementById('file-upload').click()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                <polyline points="17 8 12 3 7 8"></polyline>
+                                <line x1="12" y1="3" x2="12" y2="15"></line>
+                            </svg>
+                            Upload .java
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Live Code Editor wrapper -->
@@ -755,6 +768,21 @@
                                 update at 60 FPS while your robot program
                                 executes in parallel.
                             </p>
+                        </div>
+
+                        <div class="help-section">
+                            <h3>Hardware Mapping & Motor Directions</h3>
+                            <p>
+                                Just like programming a real FTC robot, you must connect your code to physical hardware ports using the <strong>hardwareMap</strong>.
+                                Furthermore, because left and right motors are mounted mirrored to each other on the chassis, you must set the <strong>right motors to REVERSE</strong> to ensure positive power pushes the robot forward.
+                            </p>
+                            <div class="math-code-block">
+                                DcMotor frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");<br>
+                                DcMotor frontRight = hardwareMap.get(DcMotor.class, "frontRight");<br>
+                                <br>
+                                // Reverse right motors<br>
+                                frontRight.setDirection(DcMotor.Direction.REVERSE);
+                            </div>
                         </div>
 
                         <div class="help-section">
@@ -1084,6 +1112,16 @@
 // Press INIT, then START above to run.
 // Keyboard binds: WASD (drive/strafe), Q/E (turn)
 
+// 1. Hardware Map Initialization
+DcMotor frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
+DcMotor frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+DcMotor backLeft = hardwareMap.get(DcMotor.class, "backLeft");
+DcMotor backRight = hardwareMap.get(DcMotor.class, "backRight");
+
+// 2. Reverse Right Motors (Standard FTC physics requirement)
+frontRight.setDirection(DcMotor.Direction.REVERSE);
+backRight.setDirection(DcMotor.Direction.REVERSE);
+
 telemetry.addData("Status", "OpMode Ready. Press start!");
 telemetry.update();
 
@@ -1127,6 +1165,16 @@ while (opModeIsActive()) {
 // Showcases target encoder modes and proportional control
 // Press INIT, then START above to execute.
 
+// 1. Hardware Map Initialization
+DcMotor frontLeft = hardwareMap.get(DcMotor.class, "frontLeft");
+DcMotor frontRight = hardwareMap.get(DcMotor.class, "frontRight");
+DcMotor backLeft = hardwareMap.get(DcMotor.class, "backLeft");
+DcMotor backRight = hardwareMap.get(DcMotor.class, "backRight");
+
+// 2. Reverse Right Motors to ensure forward translation
+frontRight.setDirection(DcMotor.Direction.REVERSE);
+backRight.setDirection(DcMotor.Direction.REVERSE);
+
 telemetry.addData("Status", "Encoder Auto Compiled!");
 telemetry.update();
 
@@ -1160,7 +1208,7 @@ if (opModeIsActive()) {
 
     // Wait until motors reach target
     while (opModeIsActive() && frontLeft.isBusy()) {
-        telemetry.addData("Path", "Driving to Target 1200 ticks");
+        telemetry.addData("Path", "Driving Forward (1200 ticks)");
         telemetry.addData("FL Pos", frontLeft.getCurrentPosition());
         telemetry.update();
         sleep(20);
@@ -1173,7 +1221,9 @@ if (opModeIsActive()) {
     backRight.setPower(0.0);
     sleep(500);
 
-    // 5. Spin Turn Right 800 ticks
+    // 5. Spin Turn Right 800 ticks (Left forward, Right reverse physically)
+    // Since right motors are already reversed via code mapping,
+    // negative target on right makes them properly spin backward physically.
     frontLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     frontRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     backLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -1191,7 +1241,7 @@ if (opModeIsActive()) {
     backRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
 
     frontLeft.setPower(0.5);
-    frontRight.setPower(0.5);
+    frontRight.setPower(0.5); // Still positive power! Target dictates the reverse spin.
     backLeft.setPower(0.5);
     backRight.setPower(0.5);
 
@@ -1302,6 +1352,40 @@ if (opModeIsActive()) {
                             }
                         }
                     });
+                });
+
+                // File Upload Integration
+                document.getElementById('file-upload').addEventListener('change', (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const contents = event.target.result;
+
+                        // Switch to Teleop if not in an editor tab
+                        const activeTab = document.querySelector('.tab-btn.active');
+                        let targetTab = 'teleop';
+                        if (activeTab && activeTab.id === 'tab-auto') {
+                            targetTab = 'auto';
+                        } else if (activeTab && (activeTab.id === 'tab-config' || activeTab.id === 'tab-help')) {
+                            window.switchTemplate('teleop');
+                        }
+
+                        if (window.editor) {
+                            window.editor.setValue(contents);
+                        }
+                        userCode[targetTab] = contents;
+
+                        if (telemetryMock) {
+                            telemetryMock.addData("System", `Successfully loaded: ${file.name}`);
+                            telemetryMock.update();
+                        }
+
+                        // Reset file input so same file can be uploaded again
+                        e.target.value = '';
+                    };
+                    reader.readAsText(file);
                 });
 
                 // --- 1. Physics Setup (Rapier.js) ---
@@ -1814,37 +1898,29 @@ if (opModeIsActive()) {
                         this.maxRpm = currentRpm;
                         this.ticksPerRev = currentPpr;
 
-                        // Reverse direction modifier
-                        const dirMultiplier =
-                            this.direction === DcMotorEnums.Direction.REVERSE
-                                ? -1
-                                : 1;
-                        let targetPower = this.power;
+                        let logicalPower = this.power;
 
                         // Handle RUN_TO_POSITION proportional logic
-                        if (
-                            this.mode === DcMotorEnums.RunMode.RUN_TO_POSITION
-                        ) {
+                        if (this.mode === DcMotorEnums.RunMode.RUN_TO_POSITION) {
                             const error = this.targetPosition - this.position;
                             if (Math.abs(error) > 10) {
                                 // Simple proportional control loop
-                                const kp = 0.004;
-                                targetPower =
-                                    Math.max(-1, Math.min(1, error * kp)) *
-                                    Math.abs(this.power);
+                                const kp = 0.005;
+                                const calculatedPower = error * kp;
+                                // Constrain output to the maximum physical power set by user
+                                logicalPower = Math.max(-Math.abs(this.power), Math.min(Math.abs(this.power), calculatedPower));
                             } else {
-                                targetPower = 0;
+                                logicalPower = 0;
                             }
                         }
 
-                        const speedRatio = targetPower * dirMultiplier;
-                        this.position +=
-                            speedRatio *
-                            (this.maxRpm / 60) *
-                            this.ticksPerRev *
-                            extGearRatio *
-                            deltaTime;
-                        return speedRatio;
+                        // Encoders natively track the motor shaft logic.
+                        // They count towards the logical target regardless of how the physical motor is mounted.
+                        this.position += logicalPower * (this.maxRpm / 60) * this.ticksPerRev * deltaTime;
+
+                        // Physical output applies the software reversal if configured
+                        const dirMultiplier = this.direction === DcMotorEnums.Direction.REVERSE ? -1 : 1;
+                        return logicalPower * dirMultiplier;
                     }
                 }
 
@@ -1952,16 +2028,27 @@ if (opModeIsActive()) {
                             motorSpecs.ticksPerRev,
                         );
 
-                        // Rotate 3D mesh wheels visually based on motor direction speeds
-                        const rotSpeed = 16 * extGearRatio * deltaTime;
+                        // Convert RAW motor speeds (taking into account their reversed settings via motor class)
+                        // In real life, right motors face the opposite direction.
+                        // Therefore, a positive motor speed on the right side propels the robot backward physically unless reversed in code.
+                        const physFl = flP;
+                        const physBl = blP;
+                        const physFr = -frP;
+                        const physBr = -brP;
+
+                        const gearRatioMultiplier = 1.0 / extGearRatio;
+                        const speedScale = motorSpecs.maxRpm / 312.0;
+
+                        // Rotate 3D mesh wheels visually based on actual physical rotation (accounting for gear ratio slowing them down)
+                        const rotSpeed = 16 * speedScale * gearRatioMultiplier * deltaTime;
                         if (this.wheels.fl)
-                            this.wheels.fl.rotation.x -= flP * rotSpeed;
+                            this.wheels.fl.rotation.x -= physFl * rotSpeed;
                         if (this.wheels.fr)
-                            this.wheels.fr.rotation.x -= frP * rotSpeed;
+                            this.wheels.fr.rotation.x -= physFr * rotSpeed;
                         if (this.wheels.bl)
-                            this.wheels.bl.rotation.x -= blP * rotSpeed;
+                            this.wheels.bl.rotation.x -= physBl * rotSpeed;
                         if (this.wheels.br)
-                            this.wheels.br.rotation.x -= brP * rotSpeed;
+                            this.wheels.br.rotation.x -= physBr * rotSpeed;
 
                         // Standard holonomic/mecanum math to convert motor power into vectors
                         let forward = 0;
@@ -1969,20 +2056,20 @@ if (opModeIsActive()) {
                         let turn = 0;
 
                         if (wheelType === "mecanum") {
-                            // Mecanum: full holonomic translation
-                            forward = (flP + frP + blP + brP) / 4;
-                            strafe = (flP - frP - blP + brP) / 4;
-                            turn = (-flP + frP - blP + brP) / 4;
+                            // Mecanum: full holonomic translation mapping actual physical vectors
+                            forward = (physFl + physFr + physBl + physBr) / 4;
+                            strafe = (physFl - physFr - physBl + physBr) / 4;
+                            turn = (physFl - physFr + physBl - physBr) / 4;
                         } else if (wheelType === "traction") {
                             // Standard: no strafing capability (translates to high lateral friction in calculations)
-                            forward = (flP + frP + blP + brP) / 4;
+                            forward = (physFl + physFr + physBl + physBr) / 4;
                             strafe = 0; // Strafe component cancelled
-                            turn = (-flP + frP - blP + brP) / 4;
+                            turn = (physFl - physFr + physBl - physBr) / 4;
                         } else if (wheelType === "omni") {
                             // Omni: moves forward and turns, side-slips easily
-                            forward = (flP + frP + blP + brP) / 4;
-                            strafe = ((flP - frP - blP + brP) / 4) * 0.7; // Strafe operates at higher slip
-                            turn = (-flP + frP - blP + brP) / 4;
+                            forward = (physFl + physFr + physBl + physBr) / 4;
+                            strafe = ((physFl - physFr - physBl + physBr) / 4) * 0.7; // Strafe operates at higher slip
+                            turn = (physFl - physFr + physBl - physBr) / 4;
                         }
 
                         // Apply Dynamic Zero Power Behavior Damping
@@ -2004,11 +2091,11 @@ if (opModeIsActive()) {
                         }
 
                         // Adjust translation constants by motor gear ratio settings
-                        const speedScale = motorSpecs.maxRpm / 312.0;
                         const IMPULSE_CONSTANT =
-                            0.95 * speedScale * (1 / extGearRatio);
+                            1.0 * speedScale * gearRatioMultiplier;
+                        // Dramatically increased turning torque to accurately overcome chassis angular damping
                         const TORQUE_CONSTANT =
-                            0.16 * speedScale * (1 / extGearRatio);
+                            0.85 * speedScale * gearRatioMultiplier;
 
                         const rot = this.chassisBody.rotation();
                         const q = new THREE.Quaternion(
@@ -2110,19 +2197,65 @@ if (opModeIsActive()) {
                     RunMode: DcMotorEnums.RunMode,
                     ZeroPowerBehavior: DcMotorEnums.ZeroPowerBehavior,
                     Direction: DcMotorEnums.Direction,
+                    class: "DcMotor" // Used as a tag reference for hardwareMap.get
                 };
+
+                class HardwareMap {
+                    constructor(devices) {
+                        this.devices = devices;
+                    }
+                    get(type, name) {
+                        if (this.devices[name]) {
+                            return this.devices[name];
+                        }
+                        throw new Error(`IllegalArgumentException: Unable to find hardware device with name: ${name}`);
+                    }
+                }
+
+                const hardwareMapMock = new HardwareMap({
+                    "frontLeft": flMotor,
+                    "frontRight": frMotor,
+                    "backLeft": blMotor,
+                    "backRight": brMotor
+                });
 
                 function compileAndInitOpMode() {
                     const javaCode = window.editor
                         ? window.editor.getValue()
                         : userCode[lastCodeTab];
 
-                    // 1. Lightweight Transpiler translating common Java syntax definitions to JS
-                    let jsCode = javaCode
+                    let codeToCompile = javaCode;
+
+                    // 1. Strip standard Java class boilerplate if present (for external file support)
+                    if (codeToCompile.includes("extends LinearOpMode") || codeToCompile.includes("class ")) {
+                        codeToCompile = codeToCompile
+                            .replace(/package\s+[\w\.]+;/g, '')
+                            .replace(/import\s+[\w\.]+;/g, '')
+                            .replace(/@\w+(?:\([^)]*\))?/g, '') // Remove annotations like @TeleOp, @Override
+                            .replace(/(?:public|private|protected)?\s*class\s+\w+\s+(?:extends\s+LinearOpMode)?\s*\{/, '')
+                            .replace(/(?:public|protected|private)?\s*void\s+runOpMode\s*\(\s*\)\s*(?:throws\s+InterruptedException\s*)?\{/, '')
+                            .replace(/\b(?:private|public|protected|final)\s+/g, ''); // Strip access modifiers
+
+                        // Remove the last two closing braces that belong to the stripped class and method
+                        let braceCount = 0;
+                        let strippedCode = '';
+                        for (let i = codeToCompile.length - 1; i >= 0; i--) {
+                            if (codeToCompile[i] === '}' && braceCount < 2) {
+                                braceCount++;
+                            } else {
+                                strippedCode = codeToCompile[i] + strippedCode;
+                            }
+                        }
+                        codeToCompile = strippedCode;
+                    }
+
+                    // 2. Transpile standard Java down to a JS Generator
+                    let jsCode = codeToCompile
                         .replace(/\bdouble\b/g, "let")
                         .replace(/\bint\b/g, "let")
                         .replace(/\bfloat\b/g, "let")
                         .replace(/\bboolean\b/g, "let")
+                        .replace(/\bDcMotor\s+/g, "let ") // Safely transpile DcMotor object assignments
                         // Injection of safe execution yielding inside loops to maintain thread health
                         .replace(
                             /while\s*\((.*?)\)\s*\{/g,
@@ -2142,10 +2275,7 @@ if (opModeIsActive()) {
                     try {
                         // 2. Wrap sandbox inside isolated runtime
                         const genFn = new GeneratorFunction(
-                            "frontLeft",
-                            "frontRight",
-                            "backLeft",
-                            "backRight",
+                            "hardwareMap",
                             "gamepad1",
                             "telemetry",
                             "waitForStart",
@@ -2158,10 +2288,7 @@ if (opModeIsActive()) {
 
                         // 3. Bind Sandbox Variables
                         opModeIterator = genFn(
-                            flMotor,
-                            frMotor,
-                            blMotor,
-                            brMotor,
+                            hardwareMapMock,
                             gamepad1,
                             telemetryMock,
                             waitForStartGen,
